@@ -2,70 +2,19 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.uchicom</groupId>
-  <artifactId>pj</artifactId>
+  <artifactId>mou</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <scm>
     <connection>scm:git:${project.scm.url}</connection>
     <developerConnection>scm:git:${project.scm.url}</developerConnection>
     <tag>HEAD</tag>
-    <url>https://github.com/uchicom/anko.git</url>
+    <url>https://github.com/uchicom/mou.git</url>
   </scm>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spotless.version>3.10.1</spotless.version>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>com.uchicom</groupId>
-      <artifactId>util</artifactId>
-      <version>1.6.5</version>
-    </dependency>
-    <dependency>
-      <groupId>com.uchicom</groupId>
-      <artifactId>zouni</artifactId>
-      <version>0.8.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jsr310</artifactId>
-      <version>2.22.2</version>
-    </dependency>
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <version>2.4.240</version>
-    </dependency>
-    <dependency>
-      <groupId>com.zaxxer</groupId>
-      <artifactId>HikariCP</artifactId>
-      <version>7.1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.uchicom</groupId>
-      <artifactId>iciql</artifactId>
-      <version>2.2.1.7</version>
-    </dependency>
-    <dependency>
-      <groupId>com.auth0</groupId>
-      <artifactId>java-jwt</artifactId>
-      <version>4.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.hibernate.validator</groupId>
-      <artifactId>hibernate-validator</artifactId>
-      <version>9.1.4.Final</version>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>jakarta.el</artifactId>
-      <version>4.0.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>5.23.0</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
@@ -116,12 +65,28 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.5.0</version>
         <executions>
           <execution>
+            <id>core-has-no-runtime-dependencies</id>
             <goals>
-              <goal>properties</goal>
+              <goal>enforce</goal>
             </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>*:*:*:*:compile</exclude>
+                    <exclude>*:*:*:*:runtime</exclude>
+                    <exclude>*:*:*:*:provided</exclude>
+                    <exclude>*:*:*:*:system</exclude>
+                  </excludes>
+                  <message>mou のコアは JDK 以外の runtime 依存を持てません（test スコープの JUnit / AssertJ のみ許容）。</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -130,10 +95,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.6.0</version>
         <configuration>
-          <systemPropertyVariables>
-            <java.util.logging.config.file>src/test/resources/logging.properties</java.util.logging.config.file>
-          </systemPropertyVariables>
-          <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+          <argLine>@{argLine}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -165,79 +127,11 @@
                 <rule>
                   <element>CLASS</element>
                   <includes>
-                    <include>com.uchicom.pj.api.*</include>
+                    <include>com.uchicom.mou.network.*</include>
+                    <include>com.uchicom.mou.logistics.*</include>
+                    <include>com.uchicom.mou.facility.*</include>
+                    <include>com.uchicom.mou.sim.*</include>
                   </includes>
-                  <excludes>
-                    <exclude>**Abstract*</exclude>
-                    <exclude>**Test</exclude>
-                  </excludes>
-                  <limits>
-                    <limit>
-                      <counter>LINE</counter>
-                      <value>COVEREDRATIO</value>
-                      <minimum>1.0</minimum>
-                    </limit>
-                    <limit>
-                      <counter>BRANCH</counter>
-                      <value>COVEREDRATIO</value>
-                      <minimum>1.0</minimum>
-                    </limit>
-                  </limits>
-                </rule>
-                <rule>
-                  <element>CLASS</element>
-                  <includes>
-                    <include>com.uchicom.pj.dao.*</include>
-                  </includes>
-                  <excludes>
-                    <exclude>**Abstract*</exclude>
-                    <exclude>**Test</exclude>
-                    <exclude>**Helper</exclude>
-                  </excludes>
-                  <limits>
-                    <limit>
-                      <counter>LINE</counter>
-                      <value>COVEREDRATIO</value>
-                      <minimum>1.0</minimum>
-                    </limit>
-                    <limit>
-                      <counter>BRANCH</counter>
-                      <value>COVEREDRATIO</value>
-                      <minimum>1.0</minimum>
-                    </limit>
-                  </limits>
-                </rule>
-                <rule>
-                  <element>CLASS</element>
-                  <includes>
-                    <include>com.uchicom.pj.service.*</include>
-                  </includes>
-                  <excludes>
-                    <exclude>**Abstract*</exclude>
-                    <exclude>**Test</exclude>
-                  </excludes>
-                  <limits>
-                    <limit>
-                      <counter>LINE</counter>
-                      <value>COVEREDRATIO</value>
-                      <minimum>0.8</minimum>
-                    </limit>
-                    <limit>
-                      <counter>BRANCH</counter>
-                      <value>COVEREDRATIO</value>
-                      <minimum>0.8</minimum>
-                    </limit>
-                  </limits>
-                </rule>
-                <rule>
-                  <element>CLASS</element>
-                  <includes>
-                    <include>com.uchicom.pj.batch.*</include>
-                  </includes>
-                  <excludes>
-                    <exclude>**Abstract*</exclude>
-                    <exclude>**Test</exclude>
-                  </excludes>
                   <limits>
                     <limit>
                       <counter>LINE</counter>
@@ -311,35 +205,21 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.6.4</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>java</goal>
-            </goals>
-            <configuration>
-              <arguments/>
-              <systemProperties/>
-            </configuration>
-          </execution>
-        </executions>
+        <configuration>
+          <mainClass>com.uchicom.mou.Main</mainClass>
+        </configuration>
       </plugin>
       <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.8.0</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
         <configuration>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>com.uchicom.mou.Main</mainClass>
+            </manifest>
+          </archive>
         </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

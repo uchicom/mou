@@ -1,134 +1,34 @@
-# CLAUDE.md — anko プロジェクト
+# CLAUDE.md — mou プロジェクト
 
-## プロジェクト概要
+## 概要
 
-**anko** はビジネス向けWebアプリケーションのためのBuildlessフレームワーク。
+**mou** は都市・物流・インフラのシミュレーションエンジン。MVP は物流シミュレーションのみ（GUI・DB なし）。
+設計は [docs/design.md](docs/design.md) が正。実装は GitHub Issue 単位で進める。
 
-- バックエンドのDTOをSingle Source of Truthとして、バリデーションルールをフロントエンドに自動伝播する
-- フロントエンドのビルドプロセス（npm, webpack, viteなど）は使用しない
-- Java + Vanilla JavaScript + HTML + CSS で構成
-- `template`タグによるDOMの直接書き換えで画面遷移（バーチャルDOM不使用）
+## 守ること
 
-## 技術スタック
+- Java 25 + Maven。コアの runtime 依存は JDK のみ（テストのみ JUnit + AssertJ）
+- 1 tick = 1 時間。個体（車両・人）は動かさず、量を数式で計算する
+- 物資量は `long`（kg）。加減乗算は exact 演算（オーバーフローはシミュレーション失敗）
+- 反復順序を決定的にする（HashMap の反復順に依存しない）。同一設定なら同一結果。MVP は乱数を使わない
+- コアは描画を知らない
+- 設計書にない機能・過剰な抽象化を足さない。設計上の重要な判断は ADR として設計書に記録する
+- コードを追加・変更したら対応する JUnit テストを追加する
 
-| カテゴリ | 技術 |
-|---|---|
-| バックエンド | Java |
-| フロントエンド | Vanilla JavaScript / HTML / CSS |
-| ビルドツール | Maven |
-| ORM | iciql |
-| 単体テスト | JUnit |
-| カバレッジ | JaCoCo |
-| 静的解析 | Error Prone |
-| フォーマッタ | Spotless |
+## ブランチ・Issue
 
-## アーキテクチャ
+- ブランチ名は `uchicom/<Issue 番号>`。reopen 後の修正は `uchicom/<番号>a`, `b` …
+- 完了時に Issue へテスト結果をコメントする
 
-```
-Browser (HTML / CSS / Vanilla JS)
-	└─ JSON fetch
-		└─ ApiServlet         # リクエストルーティング・JSONハンドリング
-			└─ API Layer      # リクエスト固有のロジック
-				└─ Service Layer  # ビジネスロジック
-					└─ DAO / ORM (iciql)  # 永続化
-```
-
-バリデーション伝播:
-
-```
-JsServlet
-	└─ DTO + Validator（アノテーション）
-		└─ validator.js（サーバー起動時に自動生成）
-			└─ ブラウザのlocalStorageにキャッシュ
-```
-
-## ディレクトリ構成
-
-```
-anko/
-	src/
-		main/
-			java/          # Javaソースコード
-			resources/     # 設定ファイル
-		test/              # バックエンドテスト
-			java/
-			resources/
-	www/                   # フロントエンド（HTML / CSS / JS）
-		test/              # フロントエンドテスト
-	database/              # ローカルデータベース
-		sql/               # SQLスクリプト
-	pom.xml
-```
-
-## Mavenコマンド
+## コマンド
 
 ```bash
-# サーバー起動
-mvn exec:java "-Dexec.mainClass=com.uchicom.pj.Main"
-
-# フォーマット適用
-mvn spotless:apply
-
-# テスト実行
-mvn verify
-
-# フルビルド（通常はこれを使う）
-mvn spotless:apply clean compile verify
+mvn spotless:apply clean compile verify   # 通常はこれ
+mvn exec:java
 ```
 
-## コーディング規約
+## 規約
 
-### Java
-
-- フォーマットは Spotless に従う。手動でスタイルを変えない
-- Error Prone の警告はエラーとして扱う。警告を残したままコミットしない
-- DTOのバリデーションは `jakarta.validation.constraints` アノテーションで定義する
-- `@Form("フォーム名")` アノテーションでDTOとフォームを紐付ける
-- フィールドはpublicで定義する
-
-```java
-@Form("login")
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class LoginDto {
-	@NotBlank(message = "必須です。")
-	public String id;
-}
-```
-
-### JavaScript / HTML / CSS
-
-- フロントエンドビルドツール禁止（ES modules, TypeScript, バンドラー不可）
-- バリデーションロジックをJSに手書きしない（validator.jsが自動生成するため）
-- グローバルな状態管理ライブラリは使用しない
-
-### ORM（iciql）
-
-- DBアクセスはDAO層に閉じる
-- JsServletからDBアクセスを行わない
-
-## テスト方針
-
-- 単体テストは JUnit で書く
-- コードを追加・変更した場合は対応するテストを追加する
-- フロントエンドテスト: `www/test/ut.htm`（単体）、`www/test/it.htm`（バックエンドとの結合）
-
-## やってはいけないこと
-
-- フロントエンドにバリデーションロジックを手書きする
-- npm / webpack / vite などフロントエンドビルドツールを導入する
-- React / Vue / Angular などのフロントエンドフレームワークを導入する
-- DTOのバリデーション定義をDTO以外の場所に書く
-- Error Proneの警告を無視する
-- Spotlessのフォーマットを手動で変える
-- DBアクセスをJsServletや上位レイヤーに書く
-
-## H2データベース操作
-
-```bash
-java -cp ~/.m2/repository/com/h2database/h2/2.4.240/2.4.240.jar org.h2.tools.RunScript \
-	-url "jdbc:h2:./database/pj;AUTO_COMPACT_FILL_RATE=0;CIPHER=AES" \
-	-user pj \
-	-password "pj pj" \
-	-script ./database/sql/create.sql \
-	-showResults
-```
+- フォーマットは Spotless に従う（手動で変えない）
+- Error Prone の警告は残さない
+- `com.uchicom.mou` 配下は JDK と mou 自身以外を import しない（`DependencyDirectionTest` で検証）
